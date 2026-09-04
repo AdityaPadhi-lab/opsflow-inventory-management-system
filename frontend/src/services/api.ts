@@ -1,9 +1,10 @@
 import axios from 'axios';
 import type { ApiError } from '../types';
 
-const API_URL =
+const API_URL = (
   import.meta.env.VITE_API_URL ||
-  'http://localhost:4000/api';
+  'http://localhost:4000/api'
+).replace(/\/+$/, '');
 
 export const api = axios.create({
   baseURL: API_URL,
@@ -24,21 +25,32 @@ api.interceptors.request.use(
 
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => {
+    return Promise.reject(error);
+  }
 );
 
 api.interceptors.response.use(
   (response) => response,
+
   (error) => {
     if (axios.isAxiosError(error)) {
       if (!error.response) {
-        console.error('API connection failed:', error.message);
-      } else {
         console.error(
-          'API error:',
-          error.response.status,
-          error.response.data
+          'OpsFlow API connection failed:',
+          error.message
         );
+      } else {
+        console.error('OpsFlow API error:', {
+          status: error.response.status,
+          data: error.response.data,
+          url: error.config?.url,
+        });
+
+        // Remove an expired/invalid token.
+        if (error.response.status === 401) {
+          localStorage.removeItem('opsflow_token');
+        }
       }
     }
 
@@ -47,13 +59,36 @@ api.interceptors.response.use(
 );
 
 export const errorMessage = (error: unknown): string => {
-  if (axios.isAxiosError<{ error?: ApiError; message?: string }>(error)) {
-    return (
-      error.response?.data?.error?.message ??
-      error.response?.data?.message ??
-      error.message ??
-      'Something went wrong. Please try again.'
-    );
+  if (axios.isAxiosError(error)) {
+    const data = error.response?.data as
+      | {
+          error?: ApiError | string;
+          message?: string;
+        }
+      | undefined;
+
+    if (typeof data?.error === 'string') {
+      return data.error;
+    }
+
+    if (
+      data?.error &&
+      typeof data.error === 'object' &&
+      'message' in data.error
+    ) {
+      return (
+        data.error.message ||
+        'Something went wrong. Please try again.'
+      );
+    }
+
+    if (data?.message) {
+      return data.message;
+    }
+
+    if (error.message) {
+      return error.message;
+    }
   }
 
   if (error instanceof Error) {
