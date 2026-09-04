@@ -3,7 +3,9 @@ import type { ApiError } from '../types';
 
 const API_URL = (
   import.meta.env.VITE_API_URL ||
-  'http://localhost:4000/api'
+  (import.meta.env.PROD
+    ? 'https://opsflow-backend-fecj.onrender.com/api'
+    : 'http://localhost:4000/api')
 ).replace(/\/+$/, '');
 
 export const api = axios.create({
@@ -25,14 +27,11 @@ api.interceptors.request.use(
 
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
 api.interceptors.response.use(
   (response) => response,
-
   (error) => {
     if (axios.isAxiosError(error)) {
       if (!error.response) {
@@ -47,7 +46,6 @@ api.interceptors.response.use(
           url: error.config?.url,
         });
 
-        // Remove an expired/invalid token.
         if (error.response.status === 401) {
           localStorage.removeItem('opsflow_token');
         }
