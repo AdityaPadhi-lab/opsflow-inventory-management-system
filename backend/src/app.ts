@@ -1,0 +1,32 @@
+import express from 'express';
+import cors from 'cors';
+import swaggerUi from 'swagger-ui-express';
+import { env } from './config/env.js';
+import { openApiDocument } from './config/openapi.js';
+import { errorHandler, notFound } from './middleware/errorHandler.js';
+import { requestContext } from './middleware/requestContext.js';
+import { authRouter } from './routes/authRoutes.js';
+import { inventoryRouter } from './routes/inventoryRoutes.js';
+import { orderRouter } from './routes/orderRoutes.js';
+import { referenceRouter } from './routes/referenceRoutes.js';
+import { transferRouter } from './routes/transferRoutes.js';
+import { workOrderRouter } from './routes/workOrderRoutes.js';
+
+export const createApp = () => {
+  const app = express();
+  app.disable('x-powered-by');
+  app.use(cors({ origin: env.CLIENT_URL, credentials: false }));
+  app.use(express.json({ limit: '200kb' }));
+  app.use(requestContext);
+  app.get('/health', (_req, res) => res.json({ success: true, data: { status: 'ok' } }));
+  app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(openApiDocument, { customSiteTitle: 'OpsFlow API Docs' }));
+  app.use('/api/auth', authRouter);
+  app.use('/api/inventory', inventoryRouter);
+  app.use('/api/work-orders', workOrderRouter);
+  app.use('/api/transfers', transferRouter);
+  app.use('/api/orders', orderRouter);
+  app.use('/api', referenceRouter);
+  app.use(notFound);
+  app.use(errorHandler);
+  return app;
+};

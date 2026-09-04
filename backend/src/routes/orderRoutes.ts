@@ -1,0 +1,12 @@
+import { Router } from 'express';
+import { orderController } from '../controllers/OrderController.js';
+import { authenticate, authorize } from '../middleware/auth.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
+import { idParams, validate } from '../validators/common.js';
+import { orderCreateSchema } from '../validators/orders.js';
+export const orderRouter = Router();
+orderRouter.use(authenticate);
+orderRouter.get('/', asyncHandler(orderController.list.bind(orderController)));
+orderRouter.get('/:id', validate({ params: idParams }), asyncHandler(orderController.get.bind(orderController)));
+orderRouter.post('/', authorize('SALES_USER'), validate({ body: orderCreateSchema }), asyncHandler(orderController.create.bind(orderController)));
+orderRouter.post('/:id/reserve', authorize('SALES_USER'), validate({ params: idParams }), asyncHandler(orderController.reserve.bind(orderController)));

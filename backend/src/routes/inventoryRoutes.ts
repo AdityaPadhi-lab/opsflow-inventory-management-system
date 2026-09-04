@@ -1,0 +1,12 @@
+import { Router } from 'express';
+import { inventoryController } from '../controllers/InventoryController.js';
+import { authenticate, authorize } from '../middleware/auth.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
+import { validate, idParams } from '../validators/common.js';
+import { adjustInventorySchema, inventoryListQuery, stockInSchema } from '../validators/inventory.js';
+export const inventoryRouter = Router();
+inventoryRouter.use(authenticate);
+inventoryRouter.get('/', validate({ query: inventoryListQuery }), asyncHandler(inventoryController.list.bind(inventoryController)));
+inventoryRouter.get('/:id', validate({ params: idParams }), asyncHandler(inventoryController.get.bind(inventoryController)));
+inventoryRouter.post('/', authorize('ADMIN', 'OPERATIONS_USER'), validate({ body: stockInSchema }), asyncHandler(inventoryController.stockIn.bind(inventoryController)));
+inventoryRouter.patch('/:id', authorize('ADMIN', 'OPERATIONS_USER'), validate({ params: idParams, body: adjustInventorySchema }), asyncHandler(inventoryController.adjust.bind(inventoryController)));

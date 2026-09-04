@@ -1,0 +1,12 @@
+import { Router } from 'express';
+import { workOrderController } from '../controllers/WorkOrderController.js';
+import { authenticate, authorize } from '../middleware/auth.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
+import { idParams, validate } from '../validators/common.js';
+import { workOrderCreateSchema, workOrderStatusSchema } from '../validators/workOrders.js';
+export const workOrderRouter = Router();
+workOrderRouter.use(authenticate);
+workOrderRouter.get('/', asyncHandler(workOrderController.list.bind(workOrderController)));
+workOrderRouter.get('/:id', validate({ params: idParams }), asyncHandler(workOrderController.get.bind(workOrderController)));
+workOrderRouter.post('/', authorize('ADMIN'), validate({ body: workOrderCreateSchema }), asyncHandler(workOrderController.create.bind(workOrderController)));
+workOrderRouter.patch('/:id/status', authorize('ADMIN'), validate({ params: idParams, body: workOrderStatusSchema }), asyncHandler(workOrderController.changeStatus.bind(workOrderController)));

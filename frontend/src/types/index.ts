@@ -1,0 +1,13 @@
+export type Role = 'ADMIN' | 'OPERATIONS_USER' | 'SALES_USER';
+export type SessionUser = { id: string; email: string; name: string; role: Role };
+export type ApiError = { code: string; message: string; details?: unknown };
+export type Location = { id: string; code: string; name: string };
+export type Category = { id: string; name: string };
+export type Item = { id: string; sku: string; name: string; unit: string; category: Category };
+export type InventoryLine = { id: string; batch: string; physicalQuantity: number; reservedQuantity: number; availableQuantity: number; item: Item; location: Location };
+export type WorkOrderMaterial = { id: string; requiredQuantity: number; availableQuantity: number; shortageQuantity: number; item: Item; potentialTransferSources: { inventoryId: string; location: Location; batch: string; availableQuantity: number }[] };
+export type WorkOrder = { id: string; code: string; status: 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED'; location: Location; assignedUser: { id: string; name: string; email: string; role: { code: Role } }; materials: WorkOrderMaterial[]; createdAt: string };
+export type Transfer = { id: string; code: string; batch: string; quantity: number; status: 'REQUESTED' | 'DISPATCHED' | 'RECEIVED'; item: Item; sourceLocation: Location; destinationLocation: Location; createdAt: string };
+export type Customer = { id: string; name: string; email?: string };
+export type CustomerOrder = { id: string; code: string; status: 'DRAFT' | 'RESERVED'; reservationStatus: 'NOT_RESERVED' | 'RESERVED'; customer: Customer; location: Location; items: { id: string; quantity: number; batch: string; item: Item; reservation: { id: string; quantity: number } | null }[]; createdAt: string };
+export type Overview = { inventoryLines: number; atRiskInventoryLines: number; openWorkOrders: number; activeTransfers: number; unreservedOrders: number };

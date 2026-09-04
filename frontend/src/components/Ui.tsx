@@ -1,0 +1,7 @@
+import clsx from 'clsx';
+export function StatusBadge({ value }: { value: string }) { const tone = value.includes('COMPLETED') || value.includes('RECEIVED') || value.includes('RESERVED') ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/20' : value.includes('SHORT') || value.includes('RISK') ? 'bg-red-50 text-red-700 ring-red-600/20' : value.includes('DISPATCHED') || value.includes('PROGRESS') ? 'bg-blue-50 text-blue-700 ring-blue-600/20' : 'bg-amber-50 text-amber-700 ring-amber-600/20'; return <span className={clsx('inline-flex whitespace-nowrap rounded-md px-2 py-1 text-xs font-semibold ring-1 ring-inset', tone)}>{value.replace(/_/g, ' ')}</span>; }
+export const formatQuantity = (value: number) => new Intl.NumberFormat('en-IN', { maximumFractionDigits: 3 }).format(value);
+export const formatDate = (value: string) => new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(value));
+export function SkeletonRows({ columns = 6 }: { columns?: number }) { return <>{[0, 1, 2, 3].map((row) => <tr key={row}>{Array.from({ length: columns }).map((_, column) => <td key={column}><div className="h-4 animate-pulse rounded bg-slate-100" /></td>)}</tr>)}</>; }
+export function EmptyState({ title, description }: { title: string; description: string }) { return <div className="px-6 py-16 text-center"><p className="font-medium text-slate-800">{title}</p><p className="mt-1 text-sm text-slate-500">{description}</p></div>; }
+

@@ -1,0 +1,12 @@
+import { Router } from 'express';
+import { referenceController } from '../controllers/ReferenceController.js';
+import { authenticate, authorize } from '../middleware/auth.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
+export const referenceRouter = Router();
+referenceRouter.use(authenticate);
+referenceRouter.get('/overview', asyncHandler(referenceController.overview.bind(referenceController)));
+referenceRouter.get('/locations', asyncHandler(referenceController.locations.bind(referenceController)));
+referenceRouter.get('/categories', asyncHandler(referenceController.categories.bind(referenceController)));
+referenceRouter.get('/items', asyncHandler(referenceController.items.bind(referenceController)));
+referenceRouter.get('/customers', asyncHandler(referenceController.customers.bind(referenceController)));
+referenceRouter.get('/users', authorize('ADMIN'), asyncHandler(referenceController.users.bind(referenceController)));

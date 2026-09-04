@@ -1,0 +1,224 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum RoleCode {
+  ADMIN
+  OPERATIONS_USER
+  SALES_USER
+}
+
+enum WorkOrderStatus {
+  ASSIGNED
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum TransferStatus {
+  REQUESTED
+  DISPATCHED
+  RECEIVED
+}
+
+enum CustomerOrderStatus {
+  DRAFT
+  RESERVED
+}
+
+enum InventoryTransactionType {
+  STOCK_IN
+  STOCK_OUT
+  RESERVATION
+  RESERVATION_RELEASE
+  TRANSFER_DISPATCH
+  TRANSFER_RECEIPT
+  ADJUSTMENT
+}
+
+model Role {
+  id        String   @id @default(cuid())
+  code      RoleCode @unique
+  label     String
+  users     User[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model User {
+  id           String                 @id @default(cuid())
+  email        String                 @unique
+  name         String
+  passwordHash String
+  roleId       String
+  role         Role                   @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  workOrders   WorkOrder[]            @relation("AssignedWorkOrders")
+  transactions InventoryTransaction[]
+  reservations Reservation[]
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+}
+
+model Location {
+  id                   String          @id @default(cuid())
+  code                 String          @unique
+  name                 String
+  inventory            Inventory[]
+  workOrders           WorkOrder[]
+  sourceTransfers      Transfer[]      @relation("TransferSource")
+  destinationTransfers Transfer[]      @relation("TransferDestination")
+  customerOrders       CustomerOrder[]
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+}
+
+model Category {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  items     Item[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Item {
+  id         String              @id @default(cuid())
+  sku        String              @unique
+  name       String
+  unit       String              @default("EA")
+  categoryId String
+  category   Category            @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  inventory  Inventory[]
+  materials  WorkOrderMaterial[]
+  transfers  Transfer[]
+  orderItems CustomerOrderItem[]
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+}
+
+model Inventory {
+  id               String                 @id @default(cuid())
+  itemId           String
+  locationId       String
+  batch            String                 @default("GENERAL")
+  physicalQuantity Decimal                @default(0) @db.Decimal(14, 3)
+  reservedQuantity Decimal                @default(0) @db.Decimal(14, 3)
+  item             Item                   @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  location         Location               @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  transactions     InventoryTransaction[]
+  reservations     Reservation[]
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+
+  @@unique([itemId, locationId, batch])
+  @@index([locationId, itemId])
+}
+
+model InventoryTransaction {
+  id          String                   @id @default(cuid())
+  inventoryId String
+  type        InventoryTransactionType
+  quantity    Decimal                  @db.Decimal(14, 3)
+  reference   String                   @unique
+  note        String?
+  createdById String?
+  inventory   Inventory                @relation(fields: [inventoryId], references: [id], onDelete: Restrict)
+  createdBy   User?                    @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime                 @default(now())
+
+  @@index([inventoryId, createdAt])
+}
+
+model WorkOrder {
+  id             String              @id @default(cuid())
+  code           String              @unique
+  locationId     String
+  assignedUserId String
+  status         WorkOrderStatus     @default(ASSIGNED)
+  location       Location            @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  assignedUser   User                @relation("AssignedWorkOrders", fields: [assignedUserId], references: [id], onDelete: Restrict)
+  materials      WorkOrderMaterial[]
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+}
+
+model WorkOrderMaterial {
+  id               String    @id @default(cuid())
+  workOrderId      String
+  itemId           String
+  requiredQuantity Decimal   @db.Decimal(14, 3)
+  workOrder        WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  item             Item      @relation(fields: [itemId], references: [id], onDelete: Restrict)
+
+  @@unique([workOrderId, itemId])
+}
+
+model Transfer {
+  id                    String         @id @default(cuid())
+  code                  String         @unique
+  sourceLocationId      String
+  destinationLocationId String
+  itemId                String
+  batch                 String         @default("GENERAL")
+  quantity              Decimal        @db.Decimal(14, 3)
+  status                TransferStatus @default(REQUESTED)
+  sourceLocation        Location       @relation("TransferSource", fields: [sourceLocationId], references: [id], onDelete: Restrict)
+  destinationLocation   Location       @relation("TransferDestination", fields: [destinationLocationId], references: [id], onDelete: Restrict)
+  item                  Item           @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+
+  @@index([status, createdAt])
+}
+
+model Customer {
+  id        String          @id @default(cuid())
+  name      String
+  email     String?         @unique
+  orders    CustomerOrder[]
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+}
+
+model CustomerOrder {
+  id         String              @id @default(cuid())
+  code       String              @unique
+  customerId String
+  locationId String
+  status     CustomerOrderStatus @default(DRAFT)
+  customer   Customer            @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  location   Location            @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  items      CustomerOrderItem[]
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+}
+
+model CustomerOrderItem {
+  id              String        @id @default(cuid())
+  customerOrderId String
+  itemId          String
+  batch           String        @default("GENERAL")
+  quantity        Decimal       @db.Decimal(14, 3)
+  customerOrder   CustomerOrder @relation(fields: [customerOrderId], references: [id], onDelete: Cascade)
+  item            Item          @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  reservation     Reservation?
+
+  @@unique([customerOrderId, itemId, batch])
+}
+
+model Reservation {
+  id                  String            @id @default(cuid())
+  customerOrderItemId String            @unique
+  inventoryId         String
+  reservedById        String
+  quantity            Decimal           @db.Decimal(14, 3)
+  customerOrderItem   CustomerOrderItem @relation(fields: [customerOrderItemId], references: [id], onDelete: Restrict)
+  inventory           Inventory         @relation(fields: [inventoryId], references: [id], onDelete: Restrict)
+  reservedBy          User              @relation(fields: [reservedById], references: [id], onDelete: Restrict)
+  createdAt           DateTime          @default(now())
+
+  @@index([inventoryId])
+}

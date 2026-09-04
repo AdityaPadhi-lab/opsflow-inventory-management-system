@@ -1,0 +1,13 @@
+import { Router } from 'express';
+import { transferController } from '../controllers/TransferController.js';
+import { authenticate, authorize } from '../middleware/auth.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
+import { validate } from '../validators/common.js';
+import { transferCreateSchema, transferIdParams } from '../validators/transfers.js';
+export const transferRouter = Router();
+transferRouter.use(authenticate);
+transferRouter.get('/', asyncHandler(transferController.list.bind(transferController)));
+transferRouter.post('/', authorize('ADMIN', 'OPERATIONS_USER'), validate({ body: transferCreateSchema }), asyncHandler(transferController.create.bind(transferController)));
+transferRouter.get('/:id/source-availability', validate({ params: transferIdParams }), asyncHandler(transferController.sourceAvailability.bind(transferController)));
+transferRouter.post('/:id/dispatch', authorize('ADMIN', 'OPERATIONS_USER'), validate({ params: transferIdParams }), asyncHandler(transferController.dispatch.bind(transferController)));
+transferRouter.post('/:id/receive', authorize('ADMIN', 'OPERATIONS_USER'), validate({ params: transferIdParams }), asyncHandler(transferController.receive.bind(transferController)));
